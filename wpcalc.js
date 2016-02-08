@@ -1,4 +1,5 @@
 
+/*jshint strict: true */
 /*global define: true, jQuery: false */
 
 if (typeof define !== 'function') {
