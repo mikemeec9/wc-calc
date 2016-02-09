@@ -1,4 +1,3 @@
-
 /*jshint strict: true */
 /*global define: true, jQuery: false */
 
@@ -106,7 +105,7 @@ define(function (require, exports, module) {
                     exports.fundExpenses(assets, wpBasisPoints);
         }
         return total;
-    }
+    };
     
     exports.wpCumulativeCost = function (assets, deposit, userCount, year) {
         var total = NaN,
