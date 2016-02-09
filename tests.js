@@ -11,18 +11,19 @@ module.exports = {
         assert.equal(1000, wpcalc.baseFee(100000));
         assert.equal(1000, wpcalc.baseFee(1000000));
         assert.equal(1000, wpcalc.baseFee(2000000));
-        assert.equal(1000, wpcalc.baseFee(3000000));
-        assert.equal(1000, wpcalc.baseFee("3000000"));
+        assert.equal(4000, wpcalc.baseFee(3000000));
+        assert.equal(4000, wpcalc.baseFee("3000000"));
         assert.notEqual(1000, wpcalc.baseFee(3000001));
     },
 
     'baseFee_bw36M': function() {
-        assert.notEqual(4000, wpcalc.baseFee(3000000));
+        assert.notEqual(4000, wpcalc.baseFee(2999999));
+        assert.equal(4000, wpcalc.baseFee(3000000));
         assert.equal(4000, wpcalc.baseFee(3000001));
         assert.equal(4000, wpcalc.baseFee(5000000));
-        assert.equal(4000, wpcalc.baseFee(6000000));
-        assert.equal(4000, wpcalc.baseFee("6000000"));
-        assert.notEqual(4000, wpcalc.baseFee(6000001));
+        assert.equal(4000, wpcalc.baseFee(5999999));
+        assert.equal(4000, wpcalc.baseFee("5999999"));
+        assert.notEqual(4000, wpcalc.baseFee(6000000));
     },
 
     'baseFee_gt6M': function() {

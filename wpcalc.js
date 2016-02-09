@@ -9,6 +9,10 @@ if (typeof define !== 'function') {
 define(function (require, exports, module) {
 
     "use strict";
+    
+    var wpStartUpCost = 3500,
+        wpRecordKeepingFee = 3475,
+        wpBasisPoints = 19;
 
     exports.exists = function () {
         return true;
@@ -18,11 +22,11 @@ define(function (require, exports, module) {
         var fee = NaN,
             million = 1000000;
         if (isFinite(String(amount)) && amount > 0) {
-            if (amount <= 3 * million) {
+            if (amount < 3 * million) {
                 fee = 1000;
-            } else if (amount <= 6 * million) {
+            } else if (amount < 6 * million) {
                 fee = 4000;
-            } else if (amount > 6 * million) {
+            } else if (amount >= 6 * million) {
                 fee = 5000;
             }
         }
@@ -68,7 +72,7 @@ define(function (require, exports, module) {
         return credit;
     };
 
-    exports.totalWithAnnual = function (assets, year, deposit) {
+    exports.totalWithAnnual = function (assets, deposit, year) {
         var total = NaN;
         if (isFinite(String(assets)) && assets > 0 &&
                 isFinite(String(year)) && year > 0 &&
@@ -87,52 +91,62 @@ define(function (require, exports, module) {
         return total;
     };
 
-    exports.firstYear = function (assets, userCount, deposit, points) {
-        var total = NaN, totalAssets;
+    exports.wpCostYearN = function(assets, deposit, userCount, year) {
+        var total = NaN;
+        
         if (isFinite(String(assets)) && assets > 0 &&
                 isFinite(String(userCount)) && userCount > 0 &&
-                isFinite(String(deposit)) && deposit >= 0 &&
-                isFinite(String(points)) && points >= 0) {
-            totalAssets = exports.totalWithAnnual(assets, 1, deposit);
-            total = exports.baseFee(totalAssets) +
-                    exports.basisPoints(totalAssets) +
-                    3475 +
+                isFinite(String(deposit)) && deposit >= 0) {
+            assets = exports.totalWithAnnual(assets, deposit, year);
+            total = exports.baseFee(assets) + 
+                    exports.basisPoints(assets) + 
+                    wpRecordKeepingFee +
                     exports.recordKeeping(userCount) +
-                    exports.recordKeepingCredit(totalAssets) +
-                    exports.fundExpenses(totalAssets, points);
+                    exports.recordKeepingCredit(assets) + 
+                    exports.fundExpenses(assets, wpBasisPoints);
         }
         return total;
-    };
-
-    exports.cumulativeCost = function (assets, deposit, year, points) {
+    }
+    
+    exports.wpCumulativeCost = function (assets, deposit, userCount, year) {
         var total = NaN,
             i;
         if (isFinite(String(assets)) && assets > 0 &&
                 isFinite(String(deposit)) && deposit >= 0 &&
-                isFinite(String(year)) && year >= 0 &&
-                isFinite(String(points)) && points >= 0) {
-            total = 0;
-            for (i = 0; i < year; i += 1) {
-                total += (points / 10000) * ((i * deposit) + Number(assets));
+                isFinite(String(year)) && year >= 0 ) {
+            total = wpStartUpCost;
+            for (i = 1; i <= year; i += 1) {
+                total += exports.wpCostYearN(assets, deposit, userCount, i);
             }
         }
         return Math.round(total);
     };
-
+    
+    exports.cumulative5YearCost = function(assets, deposit, points) {
+        var total = NaN, year, accumulatedAssets;
+        if (isFinite(String(assets)) && assets > 0 &&
+                isFinite(String(deposit)) && deposit >= 0 &&
+                isFinite(String(points)) && points >= 0) {
+            total = 0;
+            for (year = 1; year <= 5; year += 1) {
+                accumulatedAssets = exports.totalWithAnnual(assets, deposit, year);
+                total += exports.fundExpenses(accumulatedAssets, points);
+            }
+        
+        }
+        return total;
+    };
+    
     exports.cumulativeSavings = function (assets, deposit, userCount, points) {
-        var total = NaN,
-            wpPoints = 19,
-            year;
+        var total = NaN;
         if (isFinite(String(assets)) && assets > 0 &&
                 isFinite(String(deposit)) && deposit >= 0 &&
                 isFinite(String(userCount) && userCount > 0) &&
                 isFinite(String(points)) && points >= 0) {
-            total = 3500;
-            for (year = 1; year <= 5; year += 1) {
-                total += exports.firstYear(exports.totalWithAnnual(assets, year, deposit), userCount, 0, wpPoints);
-            }
+            total = Math.round(exports.cumulative5YearCost(assets, deposit, points) - 
+                                exports.wpCumulativeCost(assets, deposit, userCount, 5));
         }
-        return Math.round(exports.cumulativeCost(assets, deposit, 5, points) - total);
+        return total;
     };
 
     // http://stackoverflow.com/questions/149055/how-can-i-format-numbers-as-money-in-javascript
@@ -154,7 +168,7 @@ define(function (require, exports, module) {
             f_deposits = $("#deposits").val().replace(/[$,]+/g, ""),
             f_planfees = parseFloat($("#planfees").val().replace(/[$,]+/g, "")),
             f_planfeesp = parseFloat($("#planfeesp").val()),
-            year1cost = Math.round(exports.firstYear(f_assets, f_participants, f_deposits, 19));
+            year1cost = Math.round(exports.wpCumulativeCost(f_assets, f_deposits, f_participants, 1));
 
         if (!isFinite(String(f_planfees)) && isFinite(String(f_planfeesp))) {
             f_planfees = f_assets * f_planfeesp / 100;
